@@ -1,0 +1,12 @@
+name: Ezekiel
+
+spring:
+  datasource:
+    username: # put username here
+    password: # put password here
+    url: jdbc:mysql://localhost:3306/mydb
+    driver-class-name: com.mysql.jdbc.Driver
+  sql:
+    init:
+      platform: mysql
+      mode: never
