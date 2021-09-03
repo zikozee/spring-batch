@@ -56,16 +56,17 @@ public class BatchConfiguration {
     @Bean
     public FlatFileItemReader flatFileItemsReader(@Value("#{jobParameters['fileInput']}") FileSystemResource inputFile){
         FlatFileItemReader reader = new FlatFileItemReader();
-        // tep 1 let reader know where the file is
+        // step 1 let reader know where the file is
         reader.setResource(inputFile);
 
 
-        //create the line mapper
+        //step 2 create the line mapper
         reader.setLineMapper(new DefaultLineMapper<Product>(){
             {
                 setLineTokenizer(new DelimitedLineTokenizer(){
                     {
                         setNames("productID", "productName", "productDesc", "price", "unit");
+                        setDelimiter("|");
                     }
                 });
 
