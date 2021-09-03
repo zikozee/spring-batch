@@ -20,6 +20,8 @@ import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.file.transform.FixedLengthTokenizer;
+import org.springframework.batch.item.file.transform.Range;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -108,6 +110,43 @@ public class BatchConfiguration {
         return reader;
     }
 
+
+    @StepScope // if we don't set this jobParameter will not be set
+    @Bean
+    public FlatFileItemReader flatFileFixItemsReader(@Value("#{jobParameters['fileInput']}") FileSystemResource inputFile){
+        FlatFileItemReader reader = new FlatFileItemReader();
+        // step 1 let reader know where the file is
+        reader.setResource(inputFile);
+
+
+        //step 2 create the line mapper
+        reader.setLineMapper(new DefaultLineMapper<Product>(){
+            {
+                setLineTokenizer(new FixedLengthTokenizer(){// difference
+                    {
+                        setNames("productID", "productName", "productDesc", "price", "unit");
+                        setColumns(new Range(1, 16),
+                                new Range(17, 41),
+                                new Range(42, 65),
+                                new Range(66, 73),
+                                new Range(74, 80));
+                    }
+                });
+
+                setFieldSetMapper(new BeanWrapperFieldSetMapper<>(){
+                    {
+                        setTargetType(Product.class);
+                    }
+                });
+            }
+        });
+
+        //step 3 tell reader to skip header
+        reader.setLinesToSkip(1);
+        return reader;
+    }
+
+
     @Bean
     public Step step2(){
         // trying 3 different ways of Instantiating
@@ -115,7 +154,8 @@ public class BatchConfiguration {
         return steps.get("step2")
                 .<Integer,Integer>chunk(3)
 //                .reader(flatFileItemsReader(null)) //spring will auto-inject here
-                .reader(xmlItemReader(null))
+//                .reader(xmlItemReader(null))
+                .reader(flatFileFixItemsReader(null))
                 .writer(new ConsoleItemWriter())
                 .build();
     }
