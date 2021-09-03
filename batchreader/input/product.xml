@@ -1,0 +1,37 @@
+<products>
+    <product>
+        <productId>1</productId>
+        <productName>Apple iPhone</productName>
+        <productDesc>Apple cell (from XML)</productDesc>
+        <unit>10</unit>
+        <price>300.00</price>
+    </product>
+    <product>
+        <productId>2</productId>
+        <productName>Dell computer 1</productName>
+        <productDesc>Dell computer (from XML)</productDesc>
+        <unit>100</unit>
+        <price>7000.00</price>
+    </product>
+    <product>
+        <productId>3</productId>
+        <productName>Dell computer 2</productName>
+        <productDesc>Dell computer (from XML)</productDesc>
+        <unit>100</unit>
+        <price>7000.05</price>
+    </product>
+    <product>
+        <productId>4</productId>
+        <productName>Dell computer 3</productName>
+        <productDesc>Dell computer (from XML)</productDesc>
+        <unit>100</unit>
+        <price>7000.85</price>
+    </product>
+    <product>
+        <productId>5</productId>
+        <productName>Dell computer 4</productName>
+        <productDesc>Dell computer (from XML)</productDesc>
+        <unit>100</unit>
+        <price>7000.99</price>
+    </product>
+</products>
