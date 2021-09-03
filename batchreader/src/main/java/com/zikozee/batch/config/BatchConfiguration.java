@@ -16,6 +16,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
@@ -28,7 +29,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
+
+import javax.sql.DataSource;
 
 /**
  * @author : zikoz
@@ -44,6 +48,8 @@ public class BatchConfiguration {
     private final StepBuilderFactory steps;
     private final HelloWorldJobExecutionListener jobExecutionListener;
     private final HwStepExecutionListener stepExecutionListener;
+    private final DataSource dataSource;
+
 
 
     @Bean
@@ -148,6 +154,24 @@ public class BatchConfiguration {
 
 
     @Bean
+    public JdbcCursorItemReader jdbcCursorItemReader(){
+        JdbcCursorItemReader reader = new JdbcCursorItemReader();
+        //1. where to read from
+        reader.setDataSource(dataSource);
+        //2. set sql
+        reader.setSql("select product_id, prod_name, prod_desc as productDesc, unit, price from batch_product");
+        //3. map to bean
+        reader.setRowMapper(new BeanPropertyRowMapper<Product>(){
+            {
+                setMappedClass(Product.class);
+            }
+        });
+
+        return reader;
+    }
+
+
+    @Bean
     public Step step2(){
         // trying 3 different ways of Instantiating
 
@@ -155,7 +179,8 @@ public class BatchConfiguration {
                 .<Integer,Integer>chunk(3)
 //                .reader(flatFileItemsReader(null)) //spring will auto-inject here
 //                .reader(xmlItemReader(null))
-                .reader(flatFileFixItemsReader(null))
+//                .reader(flatFileFixItemsReader(null))
+                .reader(jdbcCursorItemReader())
                 .writer(new ConsoleItemWriter())
                 .build();
     }
