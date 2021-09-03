@@ -189,9 +189,12 @@ public class BatchConfiguration {
     @Bean
     public ItemReaderAdapter serviceItemReader(){
         ItemReaderAdapter reader = new ItemReaderAdapter();
+
+        // todo warning: this return infinite loop
 //        reader.setTargetObject(productService);
 //        reader.setTargetMethod("getProduct");
 
+        //todo info: this ensures batch reads only once by returning null at some point i.e the adapter
         reader.setTargetObject(adapter);
         reader.setTargetMethod("nextProduct");
 

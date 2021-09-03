@@ -13,7 +13,7 @@ import java.util.List;
  * @created : 03 Sep, 2021
  */
 
-//for webservice to read only once instead of infinite loop
+//todo info: for webservice to read only once instead of infinite loop
 @Component
 @RequiredArgsConstructor
 public class ProductServiceAdapter implements InitializingBean {
@@ -26,7 +26,7 @@ public class ProductServiceAdapter implements InitializingBean {
         this.products = service.getProduct();
     }
 
-    //this ensures we read  only once
+    //todo info: this ensures we read  only once
     public Product nextProduct(){
         if(!products.isEmpty())
             return this.products.remove(0);
