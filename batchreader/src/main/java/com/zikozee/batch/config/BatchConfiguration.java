@@ -3,6 +3,8 @@ package com.zikozee.batch.config;
 import com.zikozee.batch.listener.HelloWorldJobExecutionListener;
 import com.zikozee.batch.listener.HwStepExecutionListener;
 import com.zikozee.batch.model.Product;
+import com.zikozee.batch.product_adapter.ProductServiceAdapter;
+import com.zikozee.batch.service.ProductService;
 import com.zikozee.batch.writer.ConsoleItemWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
@@ -23,6 +26,8 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.FixedLengthTokenizer;
 import org.springframework.batch.item.file.transform.Range;
+import org.springframework.batch.item.json.JacksonJsonObjectReader;
+import org.springframework.batch.item.json.JsonItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +54,7 @@ public class BatchConfiguration {
     private final HelloWorldJobExecutionListener jobExecutionListener;
     private final HwStepExecutionListener stepExecutionListener;
     private final DataSource dataSource;
+    private final ProductServiceAdapter adapter;
 
 
 
@@ -170,6 +176,28 @@ public class BatchConfiguration {
         return reader;
     }
 
+    @StepScope
+    @Bean
+    public JsonItemReader jsonItemReader(@Value("#{jobParameters['fileInput']}") FileSystemResource inputFile){
+
+        JsonItemReader reader = new JsonItemReader(inputFile, new JacksonJsonObjectReader(Product.class));
+        return reader;
+
+    }
+
+
+    @Bean
+    public ItemReaderAdapter serviceItemReader(){
+        ItemReaderAdapter reader = new ItemReaderAdapter();
+//        reader.setTargetObject(productService);
+//        reader.setTargetMethod("getProduct");
+
+        reader.setTargetObject(adapter);
+        reader.setTargetMethod("nextProduct");
+
+        return reader;
+
+    }
 
     @Bean
     public Step step2(){
@@ -180,7 +208,9 @@ public class BatchConfiguration {
 //                .reader(flatFileItemsReader(null)) //spring will auto-inject here
 //                .reader(xmlItemReader(null))
 //                .reader(flatFileFixItemsReader(null))
-                .reader(jdbcCursorItemReader())
+//                .reader(jdbcCursorItemReader())
+//                .reader(jsonItemReader(null))
+                .reader(serviceItemReader())
                 .writer(new ConsoleItemWriter())
                 .build();
     }
