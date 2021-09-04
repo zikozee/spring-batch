@@ -1,6 +1,7 @@
 package com.zikozee.batch.config;
 
 import com.zikozee.batch.model.Product;
+import com.zikozee.batch.processor.ProductProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -55,7 +56,7 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public FlatFileItemReader reader(@Value("#{jobParameters[fileInput]}") FileSystemResource inputFile){
+    public FlatFileItemReader reader(@Value("#{jobParameters[fileInput]}") FileSystemResource inputFile){ //we can specify Object type FlatFileItemReader<Product>
         FlatFileItemReader reader = new FlatFileItemReader();
         reader.setResource(inputFile);
         reader.setLinesToSkip(1);
@@ -81,14 +82,14 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public FlatFileItemWriter writer(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){
+    public FlatFileItemWriter writer(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
 
         FlatFileItemWriter writer = new FlatFileItemWriter();
         writer.setResource(outputFile);
-        writer.setLineAggregator(new DelimitedLineAggregator(){
+        writer.setLineAggregator(new DelimitedLineAggregator<>(){
             {
                 setDelimiter(",");
-                setFieldExtractor(new BeanWrapperFieldExtractor(){
+                setFieldExtractor(new BeanWrapperFieldExtractor<>(){
                     {
                         setNames(new String[]{"productId", "prodName", "productDesc", "price", "unit"});
                     }
@@ -174,10 +175,11 @@ public class BatchConfiguration {
         return steps.get("step1")
                 .<Product, Product>chunk(3)
                 .reader(reader(null))
-//                .writer(writer(null))
+                .processor(new ProductProcessor()) // this was not used for the others only testing for flatfile
+                .writer(writer(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
-                .writer(dbWriter2())
+//                .writer(dbWriter2())
                 .build();
     }
 
