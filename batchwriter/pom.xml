@@ -38,6 +38,22 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
+
+        <!--XML WRITER DEPENDENCIES START-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-oxm</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.16</version>
+        </dependency>
+
+        <!--XML WRITER DEPENDENCIES START-->
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

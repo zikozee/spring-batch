@@ -17,15 +17,19 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.xml.StaxEventItemWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.oxm.xstream.XStreamMarshaller;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author : zikoz
@@ -105,11 +109,31 @@ public class BatchConfiguration {
     }
 
     @Bean
+    @StepScope
+    public StaxEventItemWriter xmlWriter(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){
+
+        XStreamMarshaller marshaller = new XStreamMarshaller();
+        Map<String, Class> aliases = new HashMap<>();
+        aliases.put("Product", Product.class);
+        marshaller.setAliases(aliases);  // this ensures xml class name is not a package name
+        marshaller.setAutodetectAnnotations(true); // this ensures Xstream on field name mapping works
+
+        StaxEventItemWriter staxEventItemWriter = new StaxEventItemWriter();
+
+        staxEventItemWriter.setResource(outputFile);
+        staxEventItemWriter.setMarshaller(marshaller);
+        staxEventItemWriter.setRootTagName("Products"); //<Products> <Product></Product> </Products>
+
+        return staxEventItemWriter;
+    }
+
+    @Bean
     public Step step1(){
         return steps.get("step1")
                 .<Product, Product>chunk(3)
                 .reader(reader(null))
-                .writer(writer(null))
+//                .writer(writer(null))
+                .writer(xmlWriter(null))
                 .build();
     }
 
