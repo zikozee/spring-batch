@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -19,7 +20,7 @@ public class ProductController {
 
     @GetMapping(path = "products")
     public ResponseEntity<List<Product>> getProduct(){
-        var product1 = Product.builder()
+        Product product1 = Product.builder()
                 .productId(1)
                 .prodName("Apple")
                 .productDesc("Apple from webservice")
@@ -27,7 +28,7 @@ public class ProductController {
                 .unit(10)
                 .build();
 
-        var product2 = Product.builder()
+        Product product2 = Product.builder()
                 .productId(2)
                 .prodName("Dell")
                 .productDesc("Dell from webservice")
@@ -35,6 +36,6 @@ public class ProductController {
                 .unit(30)
                 .build();
 
-        return new ResponseEntity<>(List.of(product1, product2), HttpStatus.OK);
+        return new ResponseEntity<>(Arrays.asList(product1, product2), HttpStatus.OK);
     }
 }
