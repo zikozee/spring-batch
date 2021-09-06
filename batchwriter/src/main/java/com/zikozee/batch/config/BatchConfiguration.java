@@ -10,13 +10,11 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.step.skip.AlwaysSkipItemSkipPolicy;
 import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
-import org.springframework.batch.item.file.FlatFileFooterCallback;
-import org.springframework.batch.item.file.FlatFileHeaderCallback;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
@@ -105,7 +103,7 @@ public class BatchConfiguration {
             }
         });
 
-        writer.setAppendAllowed(true);
+//        writer.setAppendAllowed(true); // appending to already existing record
 
         writer.setFooterCallback(new FlatFileFooterCallback() {
             @Override
@@ -175,11 +173,15 @@ public class BatchConfiguration {
         return steps.get("step1")
                 .<Product, Product>chunk(3)
                 .reader(reader(null))
-                .processor(new ProductProcessor()) // this was not used for the others only testing for flatfile
+                //.processor(new ProductProcessor()) // this was not used for the others only testing for flatFile
                 .writer(writer(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
 //                .writer(dbWriter2())
+                .faultTolerant()
+                .skip(FlatFileParseException.class)
+//                .skipLimit(3) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
+                .skipPolicy(new AlwaysSkipItemSkipPolicy())
                 .build();
     }
 
