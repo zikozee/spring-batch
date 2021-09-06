@@ -1,6 +1,8 @@
 package com.zikozee.batch.listener;
 
+import org.springframework.batch.core.annotation.OnSkipInProcess;
 import org.springframework.batch.core.annotation.OnSkipInRead;
+import org.springframework.batch.core.annotation.OnSkipInWrite;
 import org.springframework.batch.item.file.FlatFileParseException;
 import org.springframework.stereotype.Component;
 
@@ -16,13 +18,29 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class ProductSkipListener {
 
-    private String readErrFilename="batchwriter/error/read_skipped";
+    public static final String READ_ERR_FILENAME ="batchwriter/error/read_skipped";
+    private static final String PROCESS_ERR_FILENAME ="batchwriter/error/process_skipped";
+    private static final String WRITE_ERR_FILENAME ="batchwriter/error/write_skipped";
 
     @OnSkipInRead  // we also have OnskipInProcess,  OnskipInWrite
     public void onSkipRead(Throwable throwable){
         if(throwable instanceof FlatFileParseException){
             FlatFileParseException fileParseException = (FlatFileParseException) throwable;  // we can get input and line number, check FlatFileParseException implementations
-            onSKipWriter(fileParseException.getInput(), readErrFilename);
+            onSKipWriter(fileParseException.getInput(), READ_ERR_FILENAME);
+        }
+    }
+
+    @OnSkipInProcess
+    public void onSkipProcessing(Object item, Throwable throwable){
+        if(throwable instanceof RuntimeException){
+            onSKipWriter(item, PROCESS_ERR_FILENAME);
+        }
+    }
+
+    @OnSkipInWrite
+    public void onSkipWriting(Object item, Throwable throwable){
+        if(throwable instanceof RuntimeException){
+            onSKipWriter(item, WRITE_ERR_FILENAME);
         }
     }
 

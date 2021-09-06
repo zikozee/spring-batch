@@ -13,7 +13,7 @@ public class ProductProcessor implements ItemProcessor<Product, Product> {
     // we can carry out custom complex business logic here
     @Override
     public Product process(Product item) throws Exception {
-        if(item.getProductId() == 2) return null;
+        if(item.getProductId() == 2) throw new RuntimeException("Because ID is 2"); // simulation to test skip Processing error
         else
             item.setProductDesc(item.getProductDesc().toUpperCase());
 

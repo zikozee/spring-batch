@@ -36,6 +36,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -81,9 +82,21 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public FlatFileItemWriter writer(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
+    public FlatFileItemWriter<Product> writer(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
 
-        FlatFileItemWriter writer = new FlatFileItemWriter();
+        FlatFileItemWriter writer = new FlatFileItemWriter<Product>(){
+
+            //for testing skip writing
+            @Override
+            public String doWrite(List<? extends Product> items) {
+                for(Product item: items){
+                    if (item.getProductId() == 9)
+                        throw new RuntimeException("Because ID is 9");
+
+                }
+                return super.doWrite(items);
+            }
+        };
         writer.setResource(outputFile);
         writer.setLineAggregator(new DelimitedLineAggregator<>(){
             {
@@ -175,15 +188,15 @@ public class BatchConfiguration {
         return steps.get("step1")
                 .<Product, Product>chunk(3)
                 .reader(reader(null))
-                //.processor(new ProductProcessor()) // this was not used for the others only testing for flatFile
+                .processor(new ProductProcessor()) // this was not used for the others only testing for flatFile
                 .writer(writer(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
 //                .writer(dbWriter2())
                 .faultTolerant()
-//                .skip(FlatFileParseException.class)
-//                .skipLimit(3) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
-                .skipPolicy(new AlwaysSkipItemSkipPolicy())
+                //.skip(FlatFileParseException.class)
+                //.skipLimit(10) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
+                .skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
                 .listener(productSkipListener)
                 .build();
     }
