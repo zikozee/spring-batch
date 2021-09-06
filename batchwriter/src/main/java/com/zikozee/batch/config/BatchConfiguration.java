@@ -1,5 +1,6 @@
 package com.zikozee.batch.config;
 
+import com.zikozee.batch.listener.ProductSkipListener;
 import com.zikozee.batch.model.Product;
 import com.zikozee.batch.processor.ProductProcessor;
 import lombok.RequiredArgsConstructor;
@@ -168,6 +169,7 @@ public class BatchConfiguration {
 
     }
 
+    private final ProductSkipListener productSkipListener;
     @Bean
     public Step step1(){
         return steps.get("step1")
@@ -179,9 +181,10 @@ public class BatchConfiguration {
 //                .writer(dbWriter())
 //                .writer(dbWriter2())
                 .faultTolerant()
-                .skip(FlatFileParseException.class)
+//                .skip(FlatFileParseException.class)
 //                .skipLimit(3) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
                 .skipPolicy(new AlwaysSkipItemSkipPolicy())
+                .listener(productSkipListener)
                 .build();
     }
 
