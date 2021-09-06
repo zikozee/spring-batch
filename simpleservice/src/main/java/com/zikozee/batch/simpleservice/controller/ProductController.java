@@ -18,8 +18,22 @@ import java.util.List;
 @RestController
 public class ProductController {
 
+    @GetMapping(path = "product")
+    public ResponseEntity<Product> getProduct(){
+        Product product1 = Product.builder()
+                .productId(1)
+                .prodName("Apple")
+                .productDesc("Apple from webservice")
+                .price(BigDecimal.valueOf(300.00))
+                .unit(10)
+                .build();
+
+
+        return new ResponseEntity<>(product1, HttpStatus.OK);
+    }
+
     @GetMapping(path = "products")
-    public ResponseEntity<List<Product>> getProduct(){
+    public ResponseEntity<List<Product>> getAllProduct(){
         Product product1 = Product.builder()
                 .productId(1)
                 .prodName("Apple")

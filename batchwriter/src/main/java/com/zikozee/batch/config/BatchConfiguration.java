@@ -3,6 +3,7 @@ package com.zikozee.batch.config;
 import com.zikozee.batch.listener.ProductSkipListener;
 import com.zikozee.batch.model.Product;
 import com.zikozee.batch.processor.ProductProcessor;
+import com.zikozee.batch.product_adapter.ProductServiceAdapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -12,6 +13,7 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.step.skip.AlwaysSkipItemSkipPolicy;
+import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -27,6 +29,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.oxm.xstream.XStreamMarshaller;
+import org.springframework.web.client.ResourceAccessException;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -53,6 +56,14 @@ public class BatchConfiguration {
     private final JobBuilderFactory jobs;
     private final DataSource datasource;
 
+    private final ProductServiceAdapter serviceAdapter;
+
+    public ItemReaderAdapter itemReaderServiceAdapter(){
+        ItemReaderAdapter readerAdapter = new ItemReaderAdapter();
+        readerAdapter.setTargetObject(serviceAdapter);
+        readerAdapter.setTargetMethod("nextProduct");
+        return readerAdapter;
+    }
 
     @Bean
     @StepScope
@@ -187,17 +198,21 @@ public class BatchConfiguration {
     public Step step1(){
         return steps.get("step1")
                 .<Product, Product>chunk(3)
-                .reader(reader(null))
-                .processor(new ProductProcessor()) // this was not used for the others only testing for flatFile
+//                .reader(reader(null))
+                .reader(itemReaderServiceAdapter())
+                .processor(new ProductProcessor()) // this wa// s not used for the others only testing for flatFile
                 .writer(writer(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
 //                .writer(dbWriter2())
                 .faultTolerant()
+                .retry(ResourceAccessException.class)
+                .retryLimit(5)
+                .skip(ResourceAccessException.class)
                 //.skip(FlatFileParseException.class)
-                //.skipLimit(10) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
-                .skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
-                .listener(productSkipListener)
+                .skipLimit(30) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
+                //.skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
+                //.listener(productSkipListener)
                 .build();
     }
 
