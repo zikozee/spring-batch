@@ -10,7 +10,7 @@ import org.springframework.web.client.RestTemplate;
  * @created : 03 Sep, 2021
  */
 
-@Service
+
 @RequiredArgsConstructor
 public class ProductService {
 

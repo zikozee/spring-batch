@@ -55,15 +55,19 @@ public class BatchConfiguration {
     private final StepBuilderFactory steps;
     private final JobBuilderFactory jobs;
     private final DataSource datasource;
+    private final ProductSkipListener productSkipListener;
 
-    private final ProductServiceAdapter serviceAdapter;
+//    private final ProductServiceAdapter serviceAdapter;
 
+    /*
     public ItemReaderAdapter itemReaderServiceAdapter(){
         ItemReaderAdapter readerAdapter = new ItemReaderAdapter();
         readerAdapter.setTargetObject(serviceAdapter);
         readerAdapter.setTargetMethod("nextProduct");
         return readerAdapter;
     }
+
+     */
 
     @Bean
     @StepScope
@@ -95,8 +99,8 @@ public class BatchConfiguration {
     @StepScope
     public FlatFileItemWriter<Product> writer(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
 
+        /*
         FlatFileItemWriter writer = new FlatFileItemWriter<Product>(){
-
             //for testing skip writing
             @Override
             public String doWrite(List<? extends Product> items) {
@@ -108,6 +112,9 @@ public class BatchConfiguration {
                 return super.doWrite(items);
             }
         };
+
+         */
+        FlatFileItemWriter writer = new FlatFileItemWriter<Product>();
         writer.setResource(outputFile);
         writer.setLineAggregator(new DelimitedLineAggregator<>(){
             {
@@ -128,14 +135,14 @@ public class BatchConfiguration {
             }
         });
 
-//        writer.setAppendAllowed(true); // appending to already existing record
+        writer.setAppendAllowed(true); // appending to already existing record
 
-        writer.setFooterCallback(new FlatFileFooterCallback() {
-            @Override
-            public void writeFooter(Writer writer) throws IOException {
-                writer.write("This file was created at: "  + new SimpleDateFormat().format(new Date()));
-            }
-        });
+//        writer.setFooterCallback(new FlatFileFooterCallback() {
+//            @Override
+//            public void writeFooter(Writer writer) throws IOException {
+//                writer.write("This file was created at: "  + new SimpleDateFormat().format(new Date()));
+//            }
+//        });
 
         return writer;
     }
@@ -193,24 +200,30 @@ public class BatchConfiguration {
 
     }
 
-    private final ProductSkipListener productSkipListener;
+    @Bean
+    public Step step0(){
+        return steps.get("step0")
+                .tasklet(new ConsoleTasklet())
+                .build();
+    }
+
     @Bean
     public Step step1(){
         return steps.get("step1")
                 .<Product, Product>chunk(3)
-//                .reader(reader(null))
-                .reader(itemReaderServiceAdapter())
+                .reader(reader(null))
+//                .reader(itemReaderServiceAdapter())
                 .processor(new ProductProcessor()) // this wa// s not used for the others only testing for flatFile
                 .writer(writer(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
 //                .writer(dbWriter2())
-                .faultTolerant()
-                .retry(ResourceAccessException.class)
-                .retryLimit(5)
-                .skip(ResourceAccessException.class)
-                //.skip(FlatFileParseException.class)
-                .skipLimit(30) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
+//                .faultTolerant()
+//                .retry(ResourceAccessException.class)
+//                .retryLimit(5)
+//                .skip(ResourceAccessException.class)
+//                .skip(FlatFileParseException.class)
+//                .skipLimit(30) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
                 //.skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
                 //.listener(productSkipListener)
                 .build();
@@ -219,8 +232,9 @@ public class BatchConfiguration {
     @Bean
     public Job job1(){
         return jobs.get("job1")
-                .incrementer(new RunIdIncrementer()) // necessary for database writing
-                .start(step1())
+                //.incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
+                .start(step0())
+                .next(step1())
                 .build();
 
     }
