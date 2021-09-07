@@ -207,6 +207,7 @@ public class BatchConfiguration {
                 .build();
     }
 
+    // when persisting reading or writing to db no need to configure transactionManagement as it is done by default
     @Bean
     public Step step1(){
         return steps.get("step1")
@@ -214,16 +215,16 @@ public class BatchConfiguration {
                 .reader(reader(null))
 //                .reader(itemReaderServiceAdapter())
                 .processor(new ProductProcessor()) // this wa// s not used for the others only testing for flatFile
-                .writer(writer(null))
+//                .writer(writer(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
-//                .writer(dbWriter2())
-//                .faultTolerant()
+                .writer(dbWriter2())
+                .faultTolerant()
 //                .retry(ResourceAccessException.class)
 //                .retryLimit(5)
-//                .skip(ResourceAccessException.class)
+                .skip(FlatFileParseException.class)
 //                .skip(FlatFileParseException.class)
-//                .skipLimit(30) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
+                .skipLimit(3) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
                 //.skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
                 //.listener(productSkipListener)
                 .build();
@@ -232,7 +233,7 @@ public class BatchConfiguration {
     @Bean
     public Job job1(){
         return jobs.get("job1")
-                //.incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
+                .incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
                 .start(step0())
                 .next(step1())
                 .build();
