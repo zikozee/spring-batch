@@ -232,6 +232,12 @@ public class BatchConfiguration {
     }
 
 
+    /*
+     *   ASYNC JOBS
+     *
+     */
+
+
     @Bean
     public Step multiThreadStep(){
 //        int cores = Runtime.getRuntime().availableProcessors();
@@ -255,8 +261,10 @@ public class BatchConfiguration {
                 .build();
     }
 
-
-    //todo info: ASYNC JOBS
+    /*
+     *   ASYNC JOBS
+     *
+     */
 
     @Bean
     public AsyncItemProcessor asyncItemProcessor(){
@@ -292,7 +300,10 @@ public class BatchConfiguration {
     }
 
 
-    //todo info: PARALLEL JOBS
+    /*
+     *  PARALLEL JOBS
+     *
+     */
 
     //download -downloadStep
     //process file- process fileStep
@@ -344,9 +355,19 @@ public class BatchConfiguration {
                 .build();
     }
 
+
+    public Step pagerDutyStep(){
+        return steps.get("pagerDutyStep")
+                .tasklet(new PagerDutyTaskLet())
+                .build();
+    }
+
     public Flow bizFlow2(){
         return new FlowBuilder< SimpleFlow >("bizFlow2")
                 .start(bizStep4())
+                .from(bizStep4()).on("*").end()  //pass on everything else
+                .on("FAILED")
+                .to(pagerDutyStep())
                 .build();
     }
 
@@ -357,6 +378,14 @@ public class BatchConfiguration {
                 .build();
 
     }
+
+
+
+    /*
+     *  SPACE
+     *
+     */
+
 
     @Bean
     public Job job1(){
