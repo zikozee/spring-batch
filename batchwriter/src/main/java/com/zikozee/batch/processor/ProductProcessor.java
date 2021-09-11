@@ -15,6 +15,7 @@ public class ProductProcessor implements ItemProcessor<Product, Product> {
     public Product process(Product item) throws Exception {
 //        if(item.getProductId() == 2) throw new RuntimeException("Because ID is 2"); // simulation to test skip Processing error
 //        else
+        Thread.sleep(300);
             item.setProductDesc(item.getProductDesc().toUpperCase());
 
         return item;

@@ -3,7 +3,6 @@ package com.zikozee.batch.config;
 import com.zikozee.batch.listener.ProductSkipListener;
 import com.zikozee.batch.model.Product;
 import com.zikozee.batch.processor.ProductProcessor;
-import com.zikozee.batch.product_adapter.ProductServiceAdapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -12,8 +11,6 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.core.step.skip.AlwaysSkipItemSkipPolicy;
-import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -29,18 +26,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.oxm.xstream.XStreamMarshaller;
-import org.springframework.web.client.ResourceAccessException;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.Writer;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author : zikoz
@@ -97,7 +94,7 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public FlatFileItemWriter<Product> writer(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
+    public FlatFileItemWriter<Product> flatFileItemWriter(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
 
         /*
         FlatFileItemWriter writer = new FlatFileItemWriter<Product>(){
@@ -211,14 +208,14 @@ public class BatchConfiguration {
     @Bean
     public Step step1(){
         return steps.get("step1")
-                .<Product, Product>chunk(3)
+                .<Product, Product>chunk(5)
                 .reader(reader(null))
 //                .reader(itemReaderServiceAdapter())
                 .processor(new ProductProcessor()) // this wa// s not used for the others only testing for flatFile
-//                .writer(writer(null))
+                .writer(flatFileItemWriter(null))
 //                .writer(xmlWriter(null))
 //                .writer(dbWriter())
-                .writer(dbWriter2())
+//                .writer(dbWriter2())
                 .faultTolerant()
 //                .retry(ResourceAccessException.class)
 //                .retryLimit(5)
@@ -230,12 +227,46 @@ public class BatchConfiguration {
                 .build();
     }
 
+
+    @Bean
+    public Step multiThreadStep(){
+//        int cores = Runtime.getRuntime().availableProcessors();
+//        System.out.println("cores: " + cores);
+
+        ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
+        threadPoolExecutor.setCorePoolSize(4);
+        threadPoolExecutor.setMaxPoolSize(4);
+        threadPoolExecutor.setQueueCapacity(4 *2);
+        threadPoolExecutor.afterPropertiesSet();
+
+        return steps.get("multiThreadStep")
+                .<Product, Product>chunk(5)
+                .reader(reader(null))
+//                .reader(itemReaderServiceAdapter())
+                .processor(new ProductProcessor()) // this wa// s not used for the others only testing for flatFile
+//                .writer(flatFileItemWriter(null))
+//                .writer(xmlWriter(null))
+//                .writer(dbWriter())
+                .writer(dbWriter2())
+                //.faultTolerant()
+//                .retry(ResourceAccessException.class)
+//                .retryLimit(5)
+                //.skip(FlatFileParseException.class)
+//                .skip(FlatFileParseException.class)
+                //.skipLimit(3) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
+                //.skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
+//                .listener(productSkipListener)
+                .taskExecutor(threadPoolExecutor)
+                .build();
+    }
+
     @Bean
     public Job job1(){
         return jobs.get("job1")
                 .incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
                 .start(step0())
-                .next(step1())
+//                .next(step1())
+                .next(multiThreadStep())
                 .build();
 
     }
