@@ -1,4 +1,4 @@
-package com.zikozee.batch.config;
+package com.zikozee.batch.tasklet;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.StepContribution;
@@ -8,14 +8,16 @@ import org.springframework.batch.repeat.RepeatStatus;
 
 /**
  * @author : zikoz
- * @created : 07 Sep, 2021
+ * @created : 11 Sep, 2021
  */
 
 @Slf4j
-public class ConsoleTasklet implements Tasklet {
+public class BizTasklet4 implements Tasklet {
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-        log.info("step 0" + "print on console  *******************    ");
+        log.info("Business Task 4 started");
+        Thread.sleep(1000);
+        log.info("Business Task 4 Completed\n");
         return RepeatStatus.FINISHED;
     }
 }
