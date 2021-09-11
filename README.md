@@ -17,3 +17,14 @@ then add flows that belong to 1 category above
 4. the we add other flows or steps
 5. then end 
 6. and then build
+
+PARTITIONING
+==========
+Useful when a large dataset from a table is to be read, processed and written somewhere
+we use
+JdbcPagingItemReader
+RangePartitioner
+and customer ColumnRangePartitioner
+
+there will  several **slave jobs** (threads) 
+partition is passed to the slaves to ("**read**, **process** and **write**")

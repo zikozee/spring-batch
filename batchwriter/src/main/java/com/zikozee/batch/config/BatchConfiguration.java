@@ -4,9 +4,13 @@ import com.zikozee.batch.listener.ProductSkipListener;
 import com.zikozee.batch.model.Product;
 import com.zikozee.batch.processor.ProductProcessor;
 import com.zikozee.batch.tasklet.*;
+import com.zikozee.batch.util_package.ColumnRangePartitioner;
+import com.zikozee.batch.util_package.RangePartitioner;
+import com.zikozee.batch.writer.ConsoleItemWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -19,7 +23,10 @@ import org.springframework.batch.integration.async.AsyncItemProcessor;
 import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcPagingItemReader;
+import org.springframework.batch.item.database.Order;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.item.database.support.MySqlPagingQueryProvider;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
@@ -32,6 +39,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.oxm.xstream.XStreamMarshaller;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -392,13 +400,71 @@ public class BatchConfiguration {
 
 
     @Bean
+    @StepScope
+    public JdbcPagingItemReader pagingItemReader(@Value("#{stepExecutionContext['minValue']}") Long minValue,
+                                                 @Value("#{stepExecutionContext['maxValue']}") Long maxValue){
+
+        Map<String, Order> sortKey = new HashMap<>();
+        sortKey.put("product_id", Order.ASCENDING);
+
+        MySqlPagingQueryProvider queryProvider = new MySqlPagingQueryProvider();
+        queryProvider.setSelectClause("product_id, prod_name, prod_desc, unit, price");
+        queryProvider.setFromClause("from batch_product");
+        queryProvider.setWhereClause("where product_id >= " + minValue + " and product_id <" + maxValue);
+        queryProvider.setSortKeys(sortKey);
+
+
+        JdbcPagingItemReader reader = new JdbcPagingItemReader();
+        reader.setDataSource(datasource);
+        reader.setQueryProvider(queryProvider);
+        reader.setFetchSize(1000);
+
+        reader.setRowMapper(new BeanPropertyRowMapper(){
+            {
+                setMappedClass(Product.class);
+            }
+        });
+
+        return reader;
+    }
+
+    public ColumnRangePartitioner columnRangePartitioner(){
+        ColumnRangePartitioner columnRangePartitioner = new ColumnRangePartitioner();
+        columnRangePartitioner.setColumn("product_id");
+        columnRangePartitioner.setDataSource(datasource);
+        columnRangePartitioner.setTable("batch_product");
+        return columnRangePartitioner;
+    }
+
+    public Step partitionStep(){
+        return steps.get("partitionStep")
+                .partitioner(slaveStep().getName(), columnRangePartitioner()) //use columnRangePartitioner()  :::: More generic
+                .step(slaveStep())
+                .gridSize(3)
+                .taskExecutor(new SimpleAsyncTaskExecutor())
+                .build();
+    }
+
+    public Step slaveStep(){
+        return steps.get("slaveStep")
+                .<Product, Product>chunk(5)
+                .reader(pagingItemReader(null, null))
+                .writer(new ConsoleItemWriter())
+                .build();
+    }
+
+    @Bean
     public Job job1(){
         return jobs.get("job1")
                 .incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
-                .start(splitFlow())
-                .next(cleanUpStep())
-                .end()
+                .start(partitionStep())
                 .build();
+
+//      PARALLEL
+//                .start(splitFlow())
+//                .next(cleanUpStep())
+//                .end()
+//                .build();
 
 
                 //.start(step0())

@@ -1,4 +1,4 @@
-package com.zikozee.batch.product_adapter;
+package com.zikozee.batch.util_package;
 
 import com.zikozee.batch.model.Product;
 import com.zikozee.batch.service.ProductService;
