@@ -5,7 +5,6 @@ import com.zikozee.batch.model.Product;
 import com.zikozee.batch.processor.ProductProcessor;
 import com.zikozee.batch.tasklet.*;
 import com.zikozee.batch.util_package.ColumnRangePartitioner;
-import com.zikozee.batch.util_package.RangePartitioner;
 import com.zikozee.batch.writer.ConsoleItemWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
@@ -15,9 +14,6 @@ import org.springframework.batch.core.configuration.annotation.EnableBatchProces
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.core.job.builder.FlowBuilder;
-import org.springframework.batch.core.job.flow.Flow;
-import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.integration.async.AsyncItemProcessor;
 import org.springframework.batch.integration.async.AsyncItemWriter;
@@ -66,6 +62,7 @@ public class BatchConfiguration {
     private final DataSource datasource;
     private final ProductSkipListener productSkipListener;
 
+
 //    private final ProductServiceAdapter serviceAdapter;
 
     /*
@@ -80,20 +77,20 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public FlatFileItemReader reader(@Value("#{jobParameters[fileInput]}") FileSystemResource inputFile){ //we can specify Object type FlatFileItemReader<Product>
+    public FlatFileItemReader reader(@Value("#{jobParameters[fileInput]}") FileSystemResource inputFile) { //we can specify Object type FlatFileItemReader<Product>
         FlatFileItemReader reader = new FlatFileItemReader();
         reader.setResource(inputFile);
         reader.setLinesToSkip(1);
 
-        reader.setLineMapper(new DefaultLineMapper<Product>(){
+        reader.setLineMapper(new DefaultLineMapper<Product>() {
             {
-                setFieldSetMapper(new BeanWrapperFieldSetMapper<>(){
+                setFieldSetMapper(new BeanWrapperFieldSetMapper<>() {
                     {
                         setTargetType(Product.class);
                     }
                 });
 
-                setLineTokenizer(new DelimitedLineTokenizer(){
+                setLineTokenizer(new DelimitedLineTokenizer() {
                     {
                         setNames("productID", "productName", "productDesc", "price", "unit");
                     }
@@ -106,7 +103,7 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public FlatFileItemWriter<Product> flatFileItemWriter(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){ //we can specify Object type FlatFileItemWriter<Product>
+    public FlatFileItemWriter<Product> flatFileItemWriter(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile) { //we can specify Object type FlatFileItemWriter<Product>
 
         /*
         FlatFileItemWriter writer = new FlatFileItemWriter<Product>(){
@@ -125,10 +122,10 @@ public class BatchConfiguration {
          */
         FlatFileItemWriter writer = new FlatFileItemWriter<Product>();
         writer.setResource(outputFile);
-        writer.setLineAggregator(new DelimitedLineAggregator<>(){
+        writer.setLineAggregator(new DelimitedLineAggregator<>() {
             {
                 setDelimiter(",");
-                setFieldExtractor(new BeanWrapperFieldExtractor<>(){
+                setFieldExtractor(new BeanWrapperFieldExtractor<>() {
                     {
                         setNames(new String[]{"productId", "prodName", "productDesc", "price", "unit"});
                     }
@@ -158,7 +155,7 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public StaxEventItemWriter xmlWriter(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile){
+    public StaxEventItemWriter xmlWriter(@Value("#{jobParameters[fileOutput]}") FileSystemResource outputFile) {
 
         XStreamMarshaller marshaller = new XStreamMarshaller();
         Map<String, Class> aliases = new HashMap<>();
@@ -177,7 +174,7 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public JdbcBatchItemWriter dbWriter(){
+    public JdbcBatchItemWriter dbWriter() {
         JdbcBatchItemWriter writer = new JdbcBatchItemWriter();
         writer.setDataSource(datasource);
         writer.setSql("insert into batch_product (product_id, prod_name, prod_desc, price, unit) " +
@@ -199,7 +196,7 @@ public class BatchConfiguration {
     //alternative in case we have multiple prepared statements
     // we use field names directly like jpql
     @Bean
-    public JdbcBatchItemWriter dbWriter2(){
+    public JdbcBatchItemWriter dbWriter2() {
         return new JdbcBatchItemWriterBuilder<Product>()
                 .dataSource(datasource)
                 .sql("insert into batch_product (product_id, prod_name, prod_desc, price, unit) " +
@@ -210,7 +207,7 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step step0(){
+    public Step step0() {
         return steps.get("step0")
                 .tasklet(new ConsoleTasklet())
                 .build();
@@ -218,7 +215,7 @@ public class BatchConfiguration {
 
     // when persisting reading or writing to db no need to configure transactionManagement as it is done by default
     @Bean
-    public Step step1(){
+    public Step step1() {
         return steps.get("step1")
                 .<Product, Product>chunk(5)
                 .reader(reader(null))
@@ -247,14 +244,14 @@ public class BatchConfiguration {
 
 
     @Bean
-    public Step multiThreadStep(){
+    public Step multiThreadStep() {
 //        int cores = Runtime.getRuntime().availableProcessors();
 //        System.out.println("cores: " + cores);
 
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
         threadPoolExecutor.setCorePoolSize(4);
         threadPoolExecutor.setMaxPoolSize(4);
-        threadPoolExecutor.setQueueCapacity(4 *2);
+        threadPoolExecutor.setQueueCapacity(4 * 2);
         threadPoolExecutor.afterPropertiesSet();
 
         return steps.get("multiThreadStep")
@@ -275,7 +272,7 @@ public class BatchConfiguration {
      */
 
     @Bean
-    public AsyncItemProcessor asyncItemProcessor(){
+    public AsyncItemProcessor asyncItemProcessor() {
 
         AsyncItemProcessor processor = new AsyncItemProcessor();
         processor.setDelegate(new ProductProcessor());
@@ -285,7 +282,7 @@ public class BatchConfiguration {
 
     @StepScope
     @Bean
-    public AsyncItemWriter asyncItemWriter(){
+    public AsyncItemWriter asyncItemWriter() {
         AsyncItemWriter asyncItemWriter = new AsyncItemWriter();
         asyncItemWriter.setDelegate(flatFileItemWriter(null));
         return asyncItemWriter;
@@ -294,7 +291,7 @@ public class BatchConfiguration {
 
     // Async step uses async processing and writing. It also maintains order of Job
     @Bean
-    public Step asyncStep(){
+    public Step asyncStep() {
 
         return steps.get("asyncStep")
                 .<Product, Product>chunk(5)
@@ -307,92 +304,6 @@ public class BatchConfiguration {
                 .build();
     }
 
-
-    /*
-     *  PARALLEL JOBS
-     *
-     */
-
-    //download -downloadStep
-    //process file- process fileStep
-    //process another business item - businessTask3
-    //business Task4 - businessTask4
-    //clean up step - cleanUpTask
-
-    public Step downloadStep(){
-        return steps.get("downloadStep")
-                .tasklet(new DownloadTasklet())
-                .build();
-    }
-
-    public Step fileProcessStep(){
-        return steps.get("fileProcessStep")
-                .tasklet(new FileProcessTasklet())
-                .build();
-    }
-
-    public Step bizStep3(){
-        return steps.get("bizStep3")
-                .tasklet(new BizTasklet3())
-                .build();
-    }
-
-    public Step bizStep4(){
-        return steps.get("bizStep4")
-                .tasklet(new BizTasklet4())
-                .build();
-    }
-
-    public Step cleanUpStep(){
-        return steps.get("cleanUpStep")
-                .tasklet(new CleanupTasklet())
-                .build();
-    }
-
-
-    public Flow fileFlow(){
-        return new FlowBuilder< SimpleFlow >("fileFlow")
-                .start(downloadStep())
-                .next(fileProcessStep())
-                .build();
-    }
-
-    public Flow bizFlow1(){
-        return new FlowBuilder< SimpleFlow >("bizFlow1")
-                .start(bizStep3())
-                .build();
-    }
-
-
-    public Step pagerDutyStep(){
-        return steps.get("pagerDutyStep")
-                .tasklet(new PagerDutyTaskLet())
-                .build();
-    }
-
-    public Flow bizFlow2(){
-        return new FlowBuilder< SimpleFlow >("bizFlow2")
-                .start(bizStep4())
-
-                //todo info: Controlling Job flow start
-                .from(bizStep4()).on("*").end()  //pass on everything else
-                .on("FAILED")
-                .to(pagerDutyStep())
-                //todo info: Controlling Job flow end
-
-                .build();
-    }
-
-    public Flow splitFlow(){
-        return new FlowBuilder<SimpleFlow>("splitFlow")
-                .split(new SimpleAsyncTaskExecutor())
-                .add(fileFlow(), bizFlow1(), bizFlow2())
-                .build();
-
-    }
-
-
-
     /*
      *  SPACE
      *
@@ -402,7 +313,7 @@ public class BatchConfiguration {
     @Bean
     @StepScope
     public JdbcPagingItemReader pagingItemReader(@Value("#{stepExecutionContext['minValue']}") Long minValue,
-                                                 @Value("#{stepExecutionContext['maxValue']}") Long maxValue){
+                                                 @Value("#{stepExecutionContext['maxValue']}") Long maxValue) {
 
         Map<String, Order> sortKey = new HashMap<>();
         sortKey.put("product_id", Order.ASCENDING);
@@ -419,7 +330,7 @@ public class BatchConfiguration {
         reader.setQueryProvider(queryProvider);
         reader.setFetchSize(1000);
 
-        reader.setRowMapper(new BeanPropertyRowMapper(){
+        reader.setRowMapper(new BeanPropertyRowMapper() {
             {
                 setMappedClass(Product.class);
             }
@@ -428,7 +339,7 @@ public class BatchConfiguration {
         return reader;
     }
 
-    public ColumnRangePartitioner columnRangePartitioner(){
+    public ColumnRangePartitioner columnRangePartitioner() {
         ColumnRangePartitioner columnRangePartitioner = new ColumnRangePartitioner();
         columnRangePartitioner.setColumn("product_id");
         columnRangePartitioner.setDataSource(datasource);
@@ -436,7 +347,16 @@ public class BatchConfiguration {
         return columnRangePartitioner;
     }
 
-    public Step partitionStep(){
+
+    public Step slaveStep() {
+        return steps.get("slaveStep")
+                .<Product, Product>chunk(5)
+                .reader(pagingItemReader(null, null))
+                .writer(new ConsoleItemWriter())
+                .build();
+    }
+
+    public Step partitionStep() {
         return steps.get("partitionStep")
                 .partitioner(slaveStep().getName(), columnRangePartitioner()) //use columnRangePartitioner()  :::: More generic
                 .step(slaveStep())
@@ -445,33 +365,79 @@ public class BatchConfiguration {
                 .build();
     }
 
-    public Step slaveStep(){
-        return steps.get("slaveStep")
-                .<Product, Product>chunk(5)
-                .reader(pagingItemReader(null, null))
-                .writer(new ConsoleItemWriter())
-                .build();
-    }
+
+
+
+    /*
+    *
+    *
+    *       JOBS
+    *
+    */
+
+    //Steps
+//    private final Step downloadStep;
+//    private final Step copyFileStep;
+//    private final Step pagerDutyStep;
+//    private final Step cleanUpStep;
+//    private final Flow splitFlow;
+
+
+
+//    @Bean
+//    public Job normalJob() {
+//        return jobs.get("multiThreadJob")
+//                .incrementer(new RunIdIncrementer())
+//                .start(step0())
+//                .next(step1())
+//                .build();
+//    }
+//
 
     @Bean
-    public Job job1(){
-        return jobs.get("job1")
-                .incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
-                .start(partitionStep())
+    public Job multiThreadJob() {
+        return jobs.get("multiThreadJob")
+                .incrementer(new RunIdIncrementer())
+                .start(step0())
+                .next(multiThreadStep())
                 .build();
+    }
 
-//      PARALLEL
-//                .start(splitFlow())
-//                .next(cleanUpStep())
+
+//    @Bean
+//    public Job asyncJob() {
+//        return jobs.get("asyncJob")
+//                .start(step0())
+//                .next(asyncStep())
+//                .build();
+//    }
+////
+//
+//    @Bean
+//    public Job parallelJob() {
+//        return jobs.get("parallelJob")
+//                .start(splitFlow)
+//                .next(cleanUpStep)
 //                .end()
 //                .build();
-
-
-                //.start(step0())
-//                .next(step1())
-//                .next(multiThreadStep())
-                //.next(asyncStep())
-                //.build();
-
-    }
+//    }
+//
+//    @Bean
+//    public Job partitionJob() {
+//        return jobs.get("partitionJob")
+//                .incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
+//                .start(partitionStep())
+//                .build();
+//    }
+//
+//
+//    @Bean
+//    public Job controllerJob() {
+//        return jobs.get("controllerJob")
+//                .incrementer(new RunIdIncrementer())
+//                .start(downloadStep)
+//                .on("*").to(copyFileStep)
+//                .from(downloadStep).on("FAILED").to(pagerDutyStep).next(cleanUpStep)
+//                .end().build();
+//    }
 }
