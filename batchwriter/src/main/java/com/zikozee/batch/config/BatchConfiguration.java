@@ -365,9 +365,13 @@ public class BatchConfiguration {
     public Flow bizFlow2(){
         return new FlowBuilder< SimpleFlow >("bizFlow2")
                 .start(bizStep4())
+
+                //todo info: Controlling Job flow start
                 .from(bizStep4()).on("*").end()  //pass on everything else
                 .on("FAILED")
                 .to(pagerDutyStep())
+                //todo info: Controlling Job flow end
+
                 .build();
     }
 
