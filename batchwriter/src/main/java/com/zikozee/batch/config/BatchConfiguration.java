@@ -11,6 +11,8 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.integration.async.AsyncItemProcessor;
+import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -25,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.oxm.xstream.XStreamMarshaller;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -242,21 +245,46 @@ public class BatchConfiguration {
         return steps.get("multiThreadStep")
                 .<Product, Product>chunk(5)
                 .reader(reader(null))
-//                .reader(itemReaderServiceAdapter())
+
                 .processor(new ProductProcessor()) // this wa// s not used for the others only testing for flatFile
-//                .writer(flatFileItemWriter(null))
-//                .writer(xmlWriter(null))
-//                .writer(dbWriter())
+
                 .writer(dbWriter2())
-                //.faultTolerant()
-//                .retry(ResourceAccessException.class)
-//                .retryLimit(5)
-                //.skip(FlatFileParseException.class)
-//                .skip(FlatFileParseException.class)
-                //.skipLimit(3) //total error it can skip before throwing exception OR JUST USE SKIP POLICY
-                //.skipPolicy(new AlwaysSkipItemSkipPolicy()) // this skips all error in read, process and write use with understanding
-//                .listener(productSkipListener)
+
                 .taskExecutor(threadPoolExecutor)
+                .build();
+    }
+
+
+    @Bean
+    public AsyncItemProcessor asyncItemProcessor(){
+
+        AsyncItemProcessor processor = new AsyncItemProcessor();
+        processor.setDelegate(new ProductProcessor());
+        processor.setTaskExecutor(new SimpleAsyncTaskExecutor());// we also use TheadPoolExecutor here
+        return processor;
+    }
+
+    @StepScope
+    @Bean
+    public AsyncItemWriter asyncItemWriter(){
+        AsyncItemWriter asyncItemWriter = new AsyncItemWriter();
+        asyncItemWriter.setDelegate(flatFileItemWriter(null));
+        return asyncItemWriter;
+    }
+
+
+    // Async step uses async processing and writing. It also maintains order of Job
+    @Bean
+    public Step asyncStep(){
+
+        return steps.get("asyncStep")
+                .<Product, Product>chunk(5)
+                .reader(reader(null))
+
+                .processor(asyncItemProcessor()) // this wa// s not used for the others only testing for flatFile
+
+                .writer(asyncItemWriter())
+
                 .build();
     }
 
@@ -266,7 +294,8 @@ public class BatchConfiguration {
                 .incrementer(new RunIdIncrementer()) // staring as new instance, necessary for database writing
                 .start(step0())
 //                .next(step1())
-                .next(multiThreadStep())
+//                .next(multiThreadStep())
+                .next(asyncStep())
                 .build();
 
     }

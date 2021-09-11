@@ -59,6 +59,12 @@
 
         <!--XML WRITER DEPENDENCIES START-->
 
+        <!-- FOR SPRING BATCH ASYNC -->
+        <dependency>
+            <groupId>org.springframework.batch</groupId>
+            <artifactId>spring-batch-integration</artifactId>
+        </dependency>
+
         <!-- FOR REST TEMPLATE -->
         <dependency>
             <groupId>org.springframework</groupId>
