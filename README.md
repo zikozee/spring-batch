@@ -11,7 +11,7 @@ Parallel Flow Job
 
 1. Group tasklet that depend on each other in the same flow
 
-2. create a diff flow with the split attribute to add a aync process
+2. create a diff flow with the split attribute to add a async process
 then add flows that belong to 1 category above
 3. we can then add the flow in the Job
 4. the we add other flows or steps
